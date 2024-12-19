@@ -17,7 +17,7 @@ func Start(e *echo.Echo) {
 	}
 
 	if err := e.Start(addrs); err != nil {
-		log.Fatal("Shutting down the server")
+		log.Fatal("Shutting down the server", err)
 	}
 }
 

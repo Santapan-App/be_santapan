@@ -1,4 +1,14 @@
-CREATE TABLE menu (
+-- Create ENUM type for bundling_type
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'bundling_type_enum') THEN
+        CREATE TYPE bundling_type_enum AS ENUM ('weekly', 'monthly');
+    END IF;
+END;
+$$;
+
+-- Table for menu items
+CREATE TABLE IF NOT EXISTS menu (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
@@ -10,18 +20,33 @@ CREATE TABLE menu (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+
+-- Table for link category and menu items
+CREATE TABLE IF NOT EXISTS category_menu (
+    id BIGSERIAL PRIMARY KEY,
+    category_id BIGINT REFERENCES category(id) ON DELETE CASCADE,
+    menu_id BIGINT REFERENCES menu(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(category_id, menu_id)  -- Ensure unique combination of category and menu items
+);
+
+-- Table for bundling types
 CREATE TABLE IF NOT EXISTS bundling (
     id BIGSERIAL PRIMARY KEY,
-    bundling_type VARCHAR(50) NOT NULL,  -- 'weekly' or 'monthly'
+    bundling_name VARCHAR(255),
+    bundling_type bundling_type_enum NOT NULL,  -- ENUM type for 'weekly' or 'monthly'
+    price DECIMAL(10, 2) NOT NULL,
     image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table to link bundling and menu items
 CREATE TABLE IF NOT EXISTS bundling_menu (
     id BIGSERIAL PRIMARY KEY,
-    bundling_id INT REFERENCES bundling(id) ON DELETE CASCADE,
-    menu_id INT REFERENCES menu(id) ON DELETE CASCADE,
+    bundling_id BIGINT REFERENCES bundling(id) ON DELETE CASCADE,
+    menu_id BIGINT REFERENCES menu(id) ON DELETE CASCADE,
     day_number INT NOT NULL,          -- Represents the day number (1-7 for weekly, 1-30 for monthly)
     meal_description TEXT,            -- Description of the meal for the day
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -57,31 +82,72 @@ EXECUTE FUNCTION update_timestamp();
 -- Seed data for menu table
 INSERT INTO menu (title, description, price, image_url, nutrition, features)
 VALUES
-    ('Avocado Salad', 'A healthy avocado salad with fresh vegetables and a side of toast', 45.900, 'http://example.com/avocado_salad.jpg', '{"calories": 350, "protein": "5g", "fat": "30g"}', '{"gluten_free": true, "vegetarian": true}'),
-    ('Grilled Chicken Salad', 'A delicious grilled chicken salad', 50.000, 'http://example.com/grilled_chicken_salad.jpg', '{"calories": 400, "protein": "35g"}', '{"high_protein": true}');
+    ('Avocado Salad', 'A healthy avocado salad with fresh vegetables and a side of toast', 45000, 'https://images.unsplash.com/photo-1670237735381-ac5c7fa72c51?q=80&w=2606&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 350, "protein": 5, "fat": 30}', '{"gluten_free": true, "vegetarian": true}'),
+    ('Grilled Chicken Salad', 'A delicious grilled chicken salad', 50000, 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=2626&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 400, "protein": 35, "fat": 0}', '{"high_protein": true}'),
+    ('Spaghetti Carbonara', 'A creamy pasta dish with bacon and parmesan cheese', 70000, 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?q=80&w=2784&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 850, "protein": 20, "fat": 35}', '{"gluten_free": false}'),
+    ('Chicken Caesar Salad', 'Grilled chicken with Caesar dressing and croutons', 60000, 'https://plus.unsplash.com/premium_photo-1700089483464-4f76cc3d360b?q=80&w=2787&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 450, "protein": 30, "fat": 20}', '{"gluten_free": false}'),
+    ('Tofu Stir-fry', 'A healthy stir-fry with tofu, vegetables, and soy sauce', 50000, 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?q=80&w=2784&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 400, "protein": 15, "fat": 18}', '{"vegetarian": true, "vegan": true}'),
+    ('Chocolate Cake', 'A rich and moist chocolate cake with frosting', 30000, 'https://plus.unsplash.com/premium_photo-1715015440855-7d95cf92608a?q=80&w=2788&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 350, "protein": 4, "fat": 18}', '{"vegetarian": true}'),
+    ('Fried Rice', 'Classic fried rice with vegetables and a choice of meat', 55000, 'https://images.unsplash.com/photo-1680674774705-90b4904b3a7f?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 600, "protein": 20, "fat": 22}', '{"gluten_free": false}'),
+    ('Miso Soup', 'Traditional Japanese miso soup with tofu and seaweed', 20000, 'https://images.unsplash.com/photo-1518646261099-bd070a676912?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 150, "protein": 8, "fat": 5}', '{"gluten_free": true, "vegetarian": true}'),
+    ('Tempura', 'Crispy tempura shrimp with a dipping sauce', 70000, 'https://plus.unsplash.com/premium_photo-1666920344211-88611229ce09?q=80&w=2787&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 500, "protein": 15, "fat": 25}', '{"gluten_free": false}');
 
--- Seed data for bundling table with a weekly plan
-INSERT INTO bundling (bundling_type)
+-- Seed data for category_menu table to link menu items to categories
+-- Assuming category_id of 1 corresponds to the 'Indonesian' category in the `category` table
+-- Assuming menu_id of 1 corresponds to the 'Avocado Salad' menu item in the `menu` table
+INSERT INTO category_menu (category_id, menu_id)
 VALUES
-    ('weekly', 'monthly');
+    (1, 1),
+    (1, 2);
+    
+-- Seed data for bundling table
+INSERT INTO bundling (bundling_name, bundling_type, price, image_url)
+VALUES
+    ('Langganan Mingguan', 'weekly', 120000, 'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGZvb2R8ZW58MHx8MHx8fDA%3D'),
+    ('Langganan Bulanan', 'monthly', 500000, 'https://images.unsplash.com/photo-1484980972926-edee96e0960d?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGZvb2R8ZW58MHx8MHx8fDA%3D');
 
 -- Seed data for bundling_menu table to represent meals for each day of the week
--- Here we assume bundling_id of 1 corresponds to the 'weekly' bundling in the `bundling` table
+-- Assuming bundling_id of 1 corresponds to the 'weekly' bundling in the `bundling` table
 INSERT INTO bundling_menu (bundling_id, menu_id, day_number, meal_description)
 VALUES
     (1, 1, 1, 'Lunch - Avocado Salad'),
-    (1, 1, 1, 'Dinner - Avocado Salad'), -- Sample duplicate to match the design
+    (1, 2, 1, 'Lunch - Grilled Chicken Salad'),
     (1, 1, 2, 'Lunch - Avocado Salad'),
-    (1, 1, 2, 'Dinner - Avocado Salad'),
     (1, 1, 3, 'Lunch - Avocado Salad'),
     (1, 2, 4, 'Lunch - Grilled Chicken Salad'),
     (1, 2, 5, 'Lunch - Grilled Chicken Salad'),
     (1, 2, 6, 'Lunch - Grilled Chicken Salad'),
-    (1, 1, 7, 'Lunch - Avocado Salad');
-
--- Add more days as needed to fill the weekly plan
-
--- Verify the inserted data
-SELECT * FROM menu;
-SELECT * FROM bundling;
-SELECT * FROM bundling_menu;
+    (1, 1, 7, 'Lunch - Avocado Salad'),
+    --> Monthly
+    (2, 1, 1, 'Salad with Avocado and Fresh Vegetables'),
+    (2, 2, 1, 'Chicken with Fresh Vegetables and Rice'),
+    (2, 1, 2, 'Fresh Avocado Salad with Crunchy Toast'),
+    (2, 1, 3, 'Healthy Avocado Salad with Seasonal Greens'),
+    (2, 2, 4, 'Grilled Chicken with Mixed Vegetables'),
+    (2, 2, 5, 'Classic Grilled Chicken with Rice and Vegetables'),
+    (2, 2, 6, 'Succulent Grilled Chicken with Herbed Rice'),
+    (2, 1, 7, 'Avocado Salad with Olive Oil Dressing'),
+    (2, 1, 8, 'Refreshing Avocado Salad with Lemon Vinaigrette'),
+    (2, 2, 8, 'Tender Grilled Chicken with Sweet Corn'),
+    (2, 3, 9, 'Spaghetti Carbonara with Creamy Parmesan Sauce'),
+    (2, 4, 10, 'Chicken Caesar Salad with Crispy Croutons'),
+    (2, 5, 11, 'Stir-fried Tofu with Bell Peppers and Soy Sauce'),
+    (2, 6, 12, 'Rich Chocolate Cake with Ganache Frosting'),
+    (2, 7, 13, 'Fried Rice with Egg and Mixed Vegetables'),
+    (2, 1, 14, 'Avocado Salad with Cherry Tomatoes and Cucumbers'),
+    (2, 2, 15, 'Grilled Chicken Breast with Steamed Broccoli'),
+    (2, 3, 16, 'Creamy Spaghetti Carbonara with Bacon'),
+    (2, 4, 17, 'Chicken Caesar Salad with Parmesan Shavings'),
+    (2, 5, 18, 'Vegan Tofu Stir-fry with Spicy Garlic Sauce'),
+    (2, 6, 19, 'Decadent Chocolate Cake with Whipped Cream'),
+    (2, 7, 20, 'Classic Fried Rice with Shrimp and Peas'),
+    (2, 1, 21, 'Light Avocado Salad with Spinach and Walnuts'),
+    (2, 2, 22, 'Grilled Chicken Thighs with Honey Glaze'),
+    (2, 3, 23, 'Spaghetti Carbonara with Truffle Oil'),
+    (2, 4, 24, 'Caesar Salad with Grilled Chicken Strips'),
+    (2, 5, 25, 'Tofu Stir-fry with Carrots and Snow Peas'),
+    (2, 6, 26, 'Moist Chocolate Cake with Strawberry Garnish'),
+    (2, 7, 27, 'Fried Rice with Pineapple and Cashews'),
+    (2, 1, 28, 'Avocado Salad with Feta Cheese and Basil'),
+    (2, 2, 29, 'Grilled Chicken with Garlic Butter Sauce'),
+    (2, 3, 30, 'Spaghetti Carbonara with Fresh Parsley');

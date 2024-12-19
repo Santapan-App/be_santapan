@@ -4,12 +4,15 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"santapan/address"
 	"santapan/article"
 	"santapan/banner"
+	"santapan/bundling"
 	"santapan/category"
 	postgresCommands "santapan/internal/repository/postgres/commands"
 	postgresQueries "santapan/internal/repository/postgres/queries"
 	"santapan/internal/rest"
+	"santapan/menu"
 	pkgEcho "santapan/pkg/echo"
 	"santapan/pkg/sql"
 	"santapan/token"
@@ -60,22 +63,28 @@ func main() {
 	categoryCommandRepo := postgresQueries.NewCategoryRepository(conn)
 
 	bannerQueryRepo := postgresQueries.NewBannerRepository(conn)
-	bannerCommandRepo := postgresCommands.NewBannerRepository(conn)
+	bannerCommandRepo := postgresQueries.NewBannerRepository(conn)
 
-	paymentQueryRepo := postgresQueries.NewPaymentRepository(conn)
-	paymentCommandRepo := postgresCommands.NewPaymentRepository(conn)
+	menuQueryRepo := postgresQueries.NewMenuRepository(conn)
+	menuCommandRepo := postgresQueries.NewMenuRepository(conn)
 
+	// bundling
 	bundlingQueryRepo := postgresQueries.NewBundlingRepository(conn)
-	bundlingCommandRepo := postgresCommands.NewBundlingRepository(conn)
+	bundlingCommandRepo := postgresQueries.NewBundlingRepository(conn)
 
+	// address
+	addressQueryRepo := postgresQueries.NewPostgresAddressQueryRepository(conn)
+	addressCommandRepo := postgresCommands.NewPostgresAddressCommandRepository(conn)
+
+	// Initialize services
 	tokenService := token.NewService(tokenQueryRepo, tokenCommandRepo)
 	userService := user.NewService(userQueryRepo, userQueryCommand)
 	articleService := article.NewService(articleQueryRepo, articleCommandRepo)
 	categoryService := category.NewService(categoryQueryRepo, categoryCommandRepo)
 	bannerService := banner.NewService(bannerQueryRepo, bannerCommandRepo)
-	transactionService := transaction.NewService()
-	paymentService := payment.NewService(paymentQueryRepo, paymentCommandRepo)
-	bundlingService := bundling.NewService(bundlingQueryRepo, bundlingCommandRepo)
+	menuService := menu.NewService(menuQueryRepo, menuCommandRepo)
+	bundlingService := bundling.NewService(bundlingQueryRepo, bundlingCommandRepo, menuQueryRepo)
+	addressService := address.NewService(addressQueryRepo, addressCommandRepo)
 
 	e := pkgEcho.Setup()
 
@@ -83,9 +92,9 @@ func main() {
 	rest.NewArticleHandler(e, articleService)
 	rest.NewCategoryHandler(e, categoryService)
 	rest.NewBannerHandler(e, bannerService)
+	rest.NewMenuHandler(e, menuService)
 	rest.NewBundlingHandler(e, bundlingService)
-	rest.NewTransactionHandler(e, transactionService)
-	rest.NewPaymentHandler(e, paymentService)
+	rest.NewAddressHandler(e, addressService)
 
 	go func() {
 		pkgEcho.Start(e)

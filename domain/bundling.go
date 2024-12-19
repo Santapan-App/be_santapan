@@ -4,23 +4,13 @@ import (
 	"time"
 )
 
-// Menu represents the menu table
-type Menu struct {
-	ID          int64     `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"` // Allows NULL values
-	Price       int64     `json:"price"`
-	ImageURL    string    `json:"image_url"` // Allows NULL values
-	Nutrition   []byte    `json:"nutrition"` // JSON data stored as []byte
-	Features    []byte    `json:"features"`  // JSON data stored as []byte
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
 // Bundling represents the bundling table
 type Bundling struct {
 	ID           int64     `json:"id"`
+	ImageURL     string    `json:"image_url"`
+	BundlingName string    `json:"bundling_name"`
 	BundlingType string    `json:"bundling_type"`
+	Price        float64   `json:"price"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -28,10 +18,10 @@ type Bundling struct {
 // BundlingMenu represents the bundling_menu table
 type BundlingMenu struct {
 	ID              int64     `json:"id"`
-	BundlingID      int64     `json:"bundling_id"`
-	MenuID          int64     `json:"menu_id"`
 	DayNumber       int       `json:"day_number"`
 	MealDescription string    `json:"meal_description"` // Allows NULL values
+	Bundling        Bundling  `json:"bundling"`
+	Menu            Menu      `json:"menu"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
