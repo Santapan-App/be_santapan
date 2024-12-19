@@ -1,96 +1,215 @@
 package rest
 
 import (
+	"bytes"
 	"context"
+	encodingJson "encoding/json"
 	"net/http"
-	"santapan/domain"
-	"santapan/pkg/json"
-	"strconv"
+	"os"
+	"santapan_transaction_service/domain"
+	"santapan_transaction_service/internal/rest/middleware"
+	"santapan_transaction_service/pkg/json"
+	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/go-playground/validator.v9"
 )
 
-// TransactionService defines the methods for handling transaction-related logic
+//go:generate mockery --name TransactionService
 type TransactionService interface {
-	Fetch(ctx context.Context, cursor string, num int64) ([]any, string, error)
-	GetCart(ctx context.Context) ([]domain.CartItem, error)
-	AddToCart(ctx context.Context, item domain.CartItem) error
-	DoTransaction(ctx context.Context) error
+	GetByUserID(ctx context.Context, userID int64) (domain.Transaction, error)
+	GetOngoing(ctx context.Context, userID int64) ([]domain.Transaction, error)
+	Validate(ctx context.Context, userID int64, transactionID int64) error
+	Store(ctx context.Context, transaction *domain.Transaction) error
+	Update(ctx context.Context, transaction *domain.Transaction) error // Explicit update method
 }
 
-// TransactionHandler represents the HTTP handler for transactions
+// TransactionHandler  represent the httphandler for transaction
 type TransactionHandler struct {
 	TransactionService TransactionService
+	CartService        CartService
 	Validator          *validator.Validate
 }
 
-// NewTransactionHandler initializes the transaction resources endpoint
-func NewTransactionHandler(e *echo.Echo, transactionService TransactionService) {
+// NewTransactionHandler will initialize the transactions/ resources endpoint
+func NewTransactionHandler(e *echo.Echo, transactionService TransactionService, cartService CartService) {
 	validator := validator.New()
+
 	handler := &TransactionHandler{
 		TransactionService: transactionService,
+		CartService:        cartService,
 		Validator:          validator,
 	}
 
-	e.GET("/histories", handler.Fetch)
-	e.GET("/cart", handler.GetCart)
-	e.POST("/cart", handler.AddToCart)
-	e.POST("/transaction", handler.DoTransaction)
+	e.GET("/transaction", handler.Fetch, middleware.AuthMiddleware)
+	e.GET("/transaction/ongoing", handler.Ongoing, middleware.AuthMiddleware)
+	e.POST("/transaction", handler.Store, middleware.AuthMiddleware)
 }
 
-// Fetch retrieves transaction histories
-func (th *TransactionHandler) Fetch(c echo.Context) error {
-	cursor := c.QueryParam("cursor")
-	num := c.QueryParam("num")
+// Fetch Transaction Based On Token User ID
+func (a *TransactionHandler) Fetch(c echo.Context) error {
+	ctx := c.Request().Context()
 
-	parseNum, err := strconv.Atoi(num)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	// Retrieve user ID from the context (assuming it's stored in the token claims)
+	userID, ok := c.Get("userID").(int64) // Adjust according to how you're storing the user ID in the context
+	if !ok {
+		return json.Response(c, http.StatusUnauthorized, false, "Unauthorized", nil)
+	}
+
+	transaction, err := a.TransactionService.GetByUserID(ctx, userID)
 	if err != nil {
-		return json.Response(c, http.StatusBadRequest, false, "", "Invalid Num")
+		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
 	}
 
-	transactions, nextCursor, err := th.TransactionService.Fetch(c.Request().Context(), cursor, int64(parseNum))
+	return json.Response(c, http.StatusOK, true, "Success", transaction)
+}
+
+// Store a new transaction
+func (a *TransactionHandler) Store(c echo.Context) error {
+	ctx := c.Request().Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	// Bind and validate the transaction request
+	var transactionBody domain.TransactionBody
+	logrus.Info(transactionBody)
+	if err := c.Bind(&transactionBody); err != nil {
+		return json.Response(c, http.StatusUnprocessableEntity, false, "Invalid request", nil)
+	}
+
+	if err := a.Validator.Struct(transactionBody); err != nil {
+		return json.Response(c, http.StatusUnprocessableEntity, false, "Invalid Validator Request!", nil)
+	}
+
+	// Retrieve user ID from the context
+	userID, ok := c.Get("userID").(int64)
+	if !ok {
+		return json.Response(c, http.StatusUnauthorized, false, "Unauthorized", nil)
+	}
+
+	// Prepare the payment request
+	paymentBody := domain.PaymentBody{
+		Amount: transactionBody.Amount,
+		Name:   transactionBody.ItemNames,  // Assuming this is a slice of strings
+		Qty:    transactionBody.ItemQtys,   // Assuming this is a slice of int64
+		Price:  transactionBody.ItemPrices, // Assuming this is a slice of float64
+	}
+
+	paymentRequestBody, err := encodingJson.Marshal(paymentBody)
 	if err != nil {
-		return json.Response(c, http.StatusInternalServerError, false, "", err.Error())
+		return json.Response(c, http.StatusInternalServerError, false, "Failed to prepare payment request", nil)
 	}
 
-	responseData := map[string]interface{}{
-		"transactions": transactions,
-		"nextCursor":   nextCursor,
-	}
-
-	return json.Response(c, http.StatusOK, true, "Successfully retrieved transaction histories!", responseData)
-}
-
-// GetCart retrieves the current cart items
-func (th *TransactionHandler) GetCart(c echo.Context) error {
-	cartItems, err := th.TransactionService.GetCart(c.Request().Context())
+	// Make the POST request to the payment service
+	url := os.Getenv("PAYMENT_URL") // Replace with the actual URL
+	req, err := http.NewRequest("POST", url, bytes.NewReader(paymentRequestBody))
 	if err != nil {
-		return json.Response(c, http.StatusInternalServerError, false, "", err.Error())
+		return json.Response(c, http.StatusInternalServerError, false, "Failed to create payment request", nil)
 	}
 
-	return json.Response(c, http.StatusOK, true, "Successfully retrieved cart items!", cartItems)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", c.Request().Header.Get("Authorization"))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, "Failed to process payment request", nil)
+	}
+	defer resp.Body.Close()
+
+	// Parse the response from the payment service
+	if resp.StatusCode != http.StatusCreated {
+		return json.Response(c, http.StatusInternalServerError, false, "Payment service error", nil)
+	}
+
+	var paymentResponse domain.PaymentResponse
+	if err := encodingJson.NewDecoder(resp.Body).Decode(&paymentResponse); err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, "Failed to parse payment response", nil)
+	}
+
+	if paymentResponse.Success == false {
+		return json.Response(c, http.StatusInternalServerError, false, paymentResponse.Message, nil)
+	}
+
+	transaction := &domain.Transaction{
+		UserID:    userID,
+		CartID:    1, // Assuming this is the cart ID
+		PaymentID: paymentResponse.Data.ID,
+		CourierID: transactionBody.CourierID,
+		AddressID: transactionBody.AddressID,
+		Status:    "pending",
+		Amount:    transactionBody.Amount,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	if err := a.TransactionService.Store(ctx, transaction); err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
+	}
+
+	return json.Response(c, http.StatusCreated, true, "Transaction created successfully", map[string]interface{}{
+		"transaction": transaction,
+		"payment_url": paymentResponse.Data.Url,
+	})
 }
 
-// AddToCart adds an item to the cart
-func (th *TransactionHandler) AddToCart(c echo.Context) error {
-	var item domain.CartItem
-	if err := c.Bind(&item); err != nil {
-		return json.Response(c, http.StatusBadRequest, false, "", "Invalid item data")
+// Ongoing Transaction Based On Token User ID
+func (a *TransactionHandler) Ongoing(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
-	if err := th.TransactionService.AddToCart(c.Request().Context(), item); err != nil {
-		return json.Response(c, http.StatusInternalServerError, false, "", err.Error())
+	// Retrieve user ID from the context (assuming it's stored in the token claims)
+	userID, ok := c.Get("userID").(int64) // Adjust according to how you're storing the user ID in the context
+	if !ok {
+		return json.Response(c, http.StatusUnauthorized, false, "Unauthorized", nil)
 	}
 
-	return json.Response(c, http.StatusOK, true, "Item successfully added to cart!", nil)
+	transaction, err := a.TransactionService.GetOngoing(ctx, userID)
+	if err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
+	}
+
+	return json.Response(c, http.StatusOK, true, "Success", transaction)
 }
 
-// DoTransaction finalizes the cart into a transaction
-func (th *TransactionHandler) DoTransaction(c echo.Context) error {
-	if err := th.TransactionService.DoTransaction(c.Request().Context()); err != nil {
-		return json.Response(c, http.StatusInternalServerError, false, "", err.Error())
-	}
+// GetDetailTransaction get detail transaction
+// func (a *TransactionHandler) GetDetailTransaction(c echo.Context) error {
+// 	// Retrieve user ID from the context (assuming it's stored in the token claims)
 
-	return json.Response(c, http.StatusOK, true, "Transaction completed successfully!", nil)
-}
+// 	ctx := c.Request().Context()
+// 	if ctx == nil {
+// 		ctx = context.Background()
+// 	}
+
+// 	// Retrieve user ID from the context (assuming it's stored in the token claims)
+// 	userID, ok := c.Get("userID").(int64) // Adjust according to how you're storing the user ID in the context
+// 	if !ok {
+// 		return json.Response(c, http.StatusUnauthorized, false, "Unauthorized", nil)
+// 	}
+
+// 	transactionID := c.Param("id")
+// 	transactionIDInt, err := strconv.ParseInt(transactionID, 10, 64)
+// 	if err != nil {
+// 		return json.Response(c, http.StatusBadRequest, false, "Invalid transaction ID", nil)
+// 	}
+
+// 	err = a.TransactionService.Validate(ctx, userID, transactionIDInt)
+// 	if err != nil {
+// 		return json.Response(c, http.StatusForbidden, false, err.Error(), nil)
+// 	}
+
+// 	transaction, err := a.TransactionService.GetByID(ctx, transactionIDInt)
+// 	if err != nil {
+// 		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
+// 	}
+
+// 	return json.Response(c, http.StatusOK, true, "Success", transaction)
+// }

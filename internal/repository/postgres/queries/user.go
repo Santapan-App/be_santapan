@@ -3,7 +3,7 @@ package queries
 import (
 	"context"
 	"database/sql"
-	"santapan/domain"
+	"santapan_transaction_service/domain"
 
 	"github.com/sirupsen/logrus"
 )

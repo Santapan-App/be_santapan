@@ -4,21 +4,16 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"santapan/article"
-	"santapan/banner"
-	"santapan/category"
-	postgresCommands "santapan/internal/repository/postgres/commands"
-	postgresQueries "santapan/internal/repository/postgres/queries"
-	"santapan/internal/rest"
-	pkgEcho "santapan/pkg/echo"
-	"santapan/pkg/sql"
-	"santapan/token"
-	"santapan/user"
+	"santapan_transaction_service/cart"
+	postgresCommands "santapan_transaction_service/internal/repository/postgres/commands"
+	postgresQueries "santapan_transaction_service/internal/repository/postgres/queries"
+	"santapan_transaction_service/internal/rest"
+	"santapan_transaction_service/item"
+	pkgEcho "santapan_transaction_service/pkg/echo"
+	"santapan_transaction_service/pkg/sql"
+	"santapan_transaction_service/transaction"
 	"syscall"
 
-	"fmt"
-
-	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Import the postgres driver for migrations
 	_ "github.com/golang-migrate/migrate/v4/source/file"       // Import the file source driver
 
@@ -28,7 +23,7 @@ import (
 
 const (
 	defaultTimeout = 30
-	defaultAddress = ":9090"
+	defaultAddress = ":9091"
 )
 
 func init() {
@@ -41,51 +36,27 @@ func main() {
 	conn := sql.Setup()
 	defer sql.Close(conn)
 
-	// Run migrations
-	if err := runMigrations(); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
-	}
+	cartQueryRepo := postgresQueries.NewPostgresCartQueryRepository(conn)
+	cartCommandRepo := postgresCommands.NewPostgresCartCommandRepository(conn)
 
-	// Setup repositories and services
-	userQueryRepo := postgresQueries.NewPostgresUserQueryRepository(conn)
-	userQueryCommand := postgresCommands.NewPostgresUserCommandRepository(conn)
+	itemQueryRepo := postgresQueries.NewPostgresItemQueryRepository(conn)
+	itemCommandRepo := postgresCommands.NewPostgresItemCommandRepository(conn)
 
-	tokenQueryRepo := postgresQueries.NewPostgresTokenQueryRepository(conn)
-	tokenCommandRepo := postgresCommands.NewPostgresTokenCommandRepository(conn)
+	// historyQueryRepo := postgresQueries.NewPostgresHistoryQueryRepository(conn)
+	// historyCommandRepo := postgresCommands.NewPostgresHistoryCommandRepository(conn)
 
-	articleQueryRepo := postgresQueries.NewArticleRepository(conn)
-	articleCommandRepo := postgresQueries.NewArticleRepository(conn)
+	transactionQueryRepo := postgresQueries.NewPostgresTransactionQueryRepository(conn)
+	transactionCommandRepo := postgresCommands.NewPostgresTransactionCommandRepository(conn)
 
-	categoryQueryRepo := postgresQueries.NewCategoryRepository(conn)
-	categoryCommandRepo := postgresQueries.NewCategoryRepository(conn)
-
-	bannerQueryRepo := postgresQueries.NewBannerRepository(conn)
-	bannerCommandRepo := postgresCommands.NewBannerRepository(conn)
-
-	paymentQueryRepo := postgresQueries.NewPaymentRepository(conn)
-	paymentCommandRepo := postgresCommands.NewPaymentRepository(conn)
-
-	bundlingQueryRepo := postgresQueries.NewBundlingRepository(conn)
-	bundlingCommandRepo := postgresCommands.NewBundlingRepository(conn)
-
-	tokenService := token.NewService(tokenQueryRepo, tokenCommandRepo)
-	userService := user.NewService(userQueryRepo, userQueryCommand)
-	articleService := article.NewService(articleQueryRepo, articleCommandRepo)
-	categoryService := category.NewService(categoryQueryRepo, categoryCommandRepo)
-	bannerService := banner.NewService(bannerQueryRepo, bannerCommandRepo)
-	transactionService := transaction.NewService()
-	paymentService := payment.NewService(paymentQueryRepo, paymentCommandRepo)
-	bundlingService := bundling.NewService(bundlingQueryRepo, bundlingCommandRepo)
-
+	// Service
+	cartService := cart.NewService(cartQueryRepo, cartCommandRepo)
+	itemService := item.NewService(itemQueryRepo, itemCommandRepo)
+	// historyService := history.NewService(historyQueryRepo, historyCommandRepo)
+	transactionService := transaction.NewService(transactionQueryRepo, transactionCommandRepo)
 	e := pkgEcho.Setup()
 
-	rest.NewAuthHandler(e, tokenService, userService)
-	rest.NewArticleHandler(e, articleService)
-	rest.NewCategoryHandler(e, categoryService)
-	rest.NewBannerHandler(e, bannerService)
-	rest.NewBundlingHandler(e, bundlingService)
-	rest.NewTransactionHandler(e, transactionService)
-	rest.NewPaymentHandler(e, paymentService)
+	rest.NewCartHandler(e, cartService, itemService)
+	rest.NewTransactionHandler(e, transactionService, cartService)
 
 	go func() {
 		pkgEcho.Start(e)
@@ -99,45 +70,4 @@ func main() {
 	<-quit
 
 	pkgEcho.Shutdown(e, defaultTimeout)
-}
-
-// runMigrations runs the database migrations
-func runMigrations() error {
-	// Build the database connection string from environment variables
-	databaseHost := os.Getenv("DATABASE_HOST")
-	databasePort := os.Getenv("DATABASE_PORT")
-	databaseUser := os.Getenv("DATABASE_USER")
-	databasePassword := os.Getenv("DATABASE_PASSWORD")
-	databaseName := os.Getenv("DATABASE_NAME")
-
-	// Format the connection string
-	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
-
-	fmt.Println(connectionString)
-
-	// Create a new migration instance
-	m, err := migrate.New(
-		"file://migrations", // Ensure this path is correct
-		connectionString,
-	)
-
-	if err != nil {
-		return fmt.Errorf("failed to create migration instance: %w", err)
-	}
-
-	// First, drop all existing tables
-	if err := m.Down(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("failed to drop existing tables: %w", err)
-	}
-	log.Println("All existing tables dropped successfully")
-
-	// Now, perform the migrations
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("migration failed: %w", err)
-	} else if err == migrate.ErrNoChange {
-		log.Println("No migrations to apply")
-	}
-
-	return nil
 }

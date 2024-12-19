@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"santapan/domain"
+	"santapan_transaction_service/domain"
 	"time"
 )
 
