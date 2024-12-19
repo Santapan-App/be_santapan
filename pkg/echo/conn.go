@@ -17,11 +17,11 @@ func Start(e *echo.Echo) {
 	}
 
 	if err := e.Start(addrs); err != nil {
-		log.Fatal("Shutting down the server")
+		log.Fatal("Shutting down the server", err)
 	}
 }
 
-// Shutdown attempts to gracefully shut down the Echo server.
+// Shutdown attempts to gracefully shut down Echo server.
 func Shutdown(e *echo.Echo, timeout int) {
 	if timeout <= 0 {
 		timeout = defaultTimeout

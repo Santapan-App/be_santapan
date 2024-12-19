@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	defaultTimeout = 30
+	defaultTimeout = 4
 	defaultAddress = ":9091"
 )
 

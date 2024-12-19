@@ -3,37 +3,87 @@ name: Deploy Go Application
 on:
   pull_request:
     branches:
-      - main
+      - deploy-cicd
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
       - name: Create Environment File
         run: |
-          echo "DEBUG=True" >> .env
-          echo "SERVER_ADDRESS=:9090" >> .env
-          echo "CONTEXT_TIMEOUT=2" >> .env
-          echo "DATABASE_HOST=localhost" >> .env
-          echo "DATABASE_PORT=5432" >> .env
-          echo "DATABASE_USER=user" >> .env
-          echo "DATABASE_PASSWORD=s4nt4p4nDatab4s3" >> .env
-          echo "DATABASE_NAME=santapan_db" >> .env
-          echo "PORT=9090" >> .env
+          cat <<EOF > .env
+          DEBUG=True
+          SERVER_ADDRESS=:9090
+          CONTEXT_TIMEOUT=2
+          DATABASE_HOST=172.17.0.2
+          DATABASE_PORT=5432
+          DATABASE_USER=user
+          DATABASE_PASSWORD=s4nt4p4nDatab4s3
+          DATABASE_NAME=santapan_db
+          PORT=9090
+          EOF
+      
+      - name: Check .env File Creation
+        run: |
+          echo "Current working directory:"
+          pwd  # Print the current working directory
+          
+          if [ -f .env ]; then
+            echo ".env file created successfully."
+            echo "Listing all files including hidden files:"
+            ls -a  # List all files in the current directory
+            cat .env
+          else
+            echo ".env file not found."
+            exit 1  # Fail the job if the .env file is not found
+          fi
+
       - name: Login to Docker Hub
+        if: success()  # Only run if previous steps were successful
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      
       - name: Build Docker Image
         run: docker build -t janfalih/santapan-api .
+      
       - name: Push Docker Image To Docker Hub
         run: docker push janfalih/santapan-api:latest
+
   deploy:
     needs: build
     runs-on: self-hosted
     steps:
       - name: Pull Docker Image
         run: docker pull janfalih/santapan-api:latest
-      - name: Remove Docker Container
-        run: docker rm -f santapan-app-container || true
+
+      - name: Remove Docker Containers
+        run: |
+          docker rm -f postgres-container || true
+          docker rm -f santapan-app-container || true
+      
+      - name: Start PostgreSQL Container
+        run: |
+          docker run -d \
+            --name postgres-container \
+            -e POSTGRES_USER=user \
+            -e POSTGRES_PASSWORD=s4nt4p4nDatab4s3 \
+            -e POSTGRES_DB=santapan_db \
+            -p 5432:5432 \
+            postgres:latest
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..30}; do
+            if docker exec postgres-container pg_isready -U user; then
+              echo "PostgreSQL is ready!"
+              break
+            else
+              echo "Waiting for PostgreSQL..."
+              sleep 2
+            fi
+          done
+
       - name: Run Docker Container
         run: docker run -d -p 9090:9090 --name santapan-app-container janfalih/santapan-api
