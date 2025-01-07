@@ -27,3 +27,10 @@ CREATE TRIGGER update_transaction_updated_at
 BEFORE UPDATE ON transaction
 FOR EACH ROW
 EXECUTE FUNCTION update_transaction_timestamp();
+
+
+-- Seed data for transaction table
+INSERT INTO transaction (user_id, cart_id, payment_id, courier_id, address_id, amount, status, created_at, updated_at)
+VALUES
+    (1, 1, 1, 1, 1, 350000, 'failed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),  -- Transaction 1 for user_id 1, cart_id 1
+    (1, 2, 1, 1, 1, 150000, 'success', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);  -- Transaction 2 for user_id 1, cart_id 2

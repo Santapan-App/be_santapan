@@ -14,7 +14,7 @@ import (
 //go:generate mockery --name ArticleService
 type ArticleService interface {
 	GetByID(ctx context.Context, id int64) (domain.Article, error)
-	Fetch(ctx context.Context, cursor string, num int64) ([]domain.Article, string, error)
+	Fetch(ctx context.Context, cursor string, num int64, search string) ([]domain.Article, string, error)
 }
 
 // ArticleHandler  represent the httphandler for article
@@ -52,12 +52,14 @@ func (ah *ArticleHandler) Fetch(c echo.Context) error {
 	cursor := c.QueryParam("cursor")
 	num := c.QueryParam("num")
 
+	search := c.QueryParam("search")
+
 	parseNum, err := strconv.Atoi(num)
 	if err != nil {
 		return json.Response(c, http.StatusBadRequest, false, "", "Invalid Num")
 	}
 
-	articles, nextCursor, err := ah.ArticleService.Fetch(c.Request().Context(), cursor, int64(parseNum))
+	articles, nextCursor, err := ah.ArticleService.Fetch(c.Request().Context(), cursor, int64(parseNum), search)
 
 	if err != nil {
 		return json.Response(c, http.StatusInternalServerError, false, "", err.Error())

@@ -9,6 +9,7 @@ import (
 	"santapan/banner"
 	"santapan/bundling"
 	"santapan/category"
+	"santapan/courier"
 	postgresCommands "santapan/internal/repository/postgres/commands"
 	postgresQueries "santapan/internal/repository/postgres/queries"
 	"santapan/internal/rest"
@@ -76,6 +77,8 @@ func main() {
 	addressQueryRepo := postgresQueries.NewPostgresAddressQueryRepository(conn)
 	addressCommandRepo := postgresCommands.NewPostgresAddressCommandRepository(conn)
 
+	courierQueryRepo := postgresQueries.NewPostgresCourierQueryRepository(conn)
+
 	// Initialize services
 	tokenService := token.NewService(tokenQueryRepo, tokenCommandRepo)
 	userService := user.NewService(userQueryRepo, userQueryCommand)
@@ -85,6 +88,7 @@ func main() {
 	menuService := menu.NewService(menuQueryRepo, menuCommandRepo)
 	bundlingService := bundling.NewService(bundlingQueryRepo, bundlingCommandRepo, menuQueryRepo)
 	addressService := address.NewService(addressQueryRepo, addressCommandRepo)
+	courierService := courier.NewService(courierQueryRepo)
 
 	e := pkgEcho.Setup()
 
@@ -95,6 +99,7 @@ func main() {
 	rest.NewMenuHandler(e, menuService)
 	rest.NewBundlingHandler(e, bundlingService)
 	rest.NewAddressHandler(e, addressService)
+	rest.NewCourierHandler(e, courierService)
 
 	go func() {
 		pkgEcho.Start(e)

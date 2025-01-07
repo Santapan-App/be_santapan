@@ -13,9 +13,9 @@ import (
 
 //go:generate mockery --name ArticleService
 type MenuService interface {
-	Fetch(ctx context.Context, cursor string, num int64) ([]domain.Menu, string, error)
+	Fetch(ctx context.Context, cursor string, num int64, search string) ([]domain.Menu, string, error)
 	GetByID(ctx context.Context, id int64) (domain.Menu, error)
-	GetByCategoryID(ctx context.Context, categoryID int64) ([]domain.Menu, error)
+	GetByCategoryID(ctx context.Context, categoryID int64, search string) ([]domain.Menu, error)
 }
 
 // ArticleHandler  represent the httphandler for article
@@ -43,13 +43,14 @@ func NewMenuHandler(e *echo.Echo, menuService MenuService) {
 func (ah *MenuHandler) Fetch(c echo.Context) error {
 	cursor := c.QueryParam("cursor")
 	num := c.QueryParam("num")
+	search := c.QueryParam("search")
 
 	parseNum, err := strconv.Atoi(num)
 	if err != nil {
 		return json.Response(c, http.StatusBadRequest, false, "", "Invalid Num")
 	}
 
-	menus, nextCursor, err := ah.MenuService.Fetch(c.Request().Context(), cursor, int64(parseNum))
+	menus, nextCursor, err := ah.MenuService.Fetch(c.Request().Context(), cursor, int64(parseNum), search)
 
 	if err != nil {
 		return json.Response(c, http.StatusInternalServerError, false, "", err.Error())
@@ -79,11 +80,13 @@ func (ah *MenuHandler) GetByID(c echo.Context) error {
 
 func (ah *MenuHandler) GetByCategoryID(c echo.Context) error {
 	categoryID, err := strconv.Atoi(c.Param("category_id"))
+	search := c.QueryParam("search")
+
 	if err != nil {
 		return json.Response(c, http.StatusBadRequest, false, "", "Invalid Category ID")
 	}
 
-	menus, err := ah.MenuService.GetByCategoryID(c.Request().Context(), int64(categoryID))
+	menus, err := ah.MenuService.GetByCategoryID(c.Request().Context(), int64(categoryID), search)
 	if err != nil {
 		return json.Response(c, http.StatusNotFound, false, "", err.Error())
 	}

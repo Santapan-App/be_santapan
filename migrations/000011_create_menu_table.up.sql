@@ -98,7 +98,9 @@ VALUES
 INSERT INTO category_menu (category_id, menu_id)
 VALUES
     (1, 1),
-    (1, 2);
+    (1, 2),
+    (1, 3),
+    (1, 4);
     
 -- Seed data for bundling table
 INSERT INTO bundling (bundling_name, bundling_type, price, image_url)

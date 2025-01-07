@@ -7,7 +7,7 @@ import (
 
 type PostgresRepositoryQueries interface {
 	GetByID(ctx context.Context, id int64) (domain.Article, error)
-	Fetch(ctx context.Context, cursor string, num int64) (res []domain.Article, nextCursor string, err error)
+	Fetch(ctx context.Context, cursor string, num int64, search string) (res []domain.Article, nextCursor string, err error)
 }
 
 type PostgresRepositoryCommand interface {
@@ -27,8 +27,8 @@ func NewService(pq PostgresRepositoryQueries, pc PostgresRepositoryCommand) *Ser
 	}
 }
 
-func (a *Service) Fetch(ctx context.Context, cursor string, num int64) (res []domain.Article, nextCursor string, err error) {
-	res, nextCursor, err = a.postgresRepoQuery.Fetch(ctx, cursor, num)
+func (a *Service) Fetch(ctx context.Context, cursor string, num int64, search string) (res []domain.Article, nextCursor string, err error) {
+	res, nextCursor, err = a.postgresRepoQuery.Fetch(ctx, cursor, num, search)
 	if err != nil {
 		return nil, "", err
 	}

@@ -51,3 +51,25 @@ CREATE TRIGGER update_cart_item_updated_at
 BEFORE UPDATE ON cart_item
 FOR EACH ROW
 EXECUTE FUNCTION update_cart_item_timestamp();
+
+-- Seed data for cart table
+INSERT INTO cart (user_id, total_price, status, created_at, updated_at)
+VALUES
+    (1, 350000, 'used', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),  -- Cart 1 for user_id 1
+    (1, 150000, 'used', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);  -- Cart 2 for user_id 1
+
+-- Insert multiple cart items for cart_id = 1 and cart_id = 2
+
+INSERT INTO cart_item (cart_id, menu_id, bundling_id, image_url, name, quantity, price, created_at, updated_at)
+VALUES
+    -- cart_id = 1
+    (1, 1, NULL, 'https://images.unsplash.com/photo-1670237735381-ac5c7fa72c51?q=80&w=2606&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'Avocado Salad', 1, 45000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (1, 2, NULL, 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=2626&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'Grilled Chicken Salad', 1, 50000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (1, NULL, 1, 'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGZvb2R8ZW58MHx8MHx8fDA%3D', 'Langganan Mingguan', 1, 120000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (1, NULL, 2, 'https://images.unsplash.com/photo-1484980972926-edee96e0960d?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGZvb2R8ZW58MHx8MHx8fDA%3D', 'Langganan Bulanan', 1, 500000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+
+    -- cart_id = 2
+    (2, 3, NULL, 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?q=80&w=2784&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'Spaghetti Carbonara', 2, 70000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (2, 4, NULL, 'https://plus.unsplash.com/premium_photo-1700089483464-4f76cc3d360b?q=80&w=2787&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'Chicken Caesar Salad', 1, 60000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (2, NULL, 1, 'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGZvb2R8ZW58MHx8MHx8fDA%3D', 'Langganan Mingguan', 1, 120000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (2, NULL, 2, 'https://images.unsplash.com/photo-1484980972926-edee96e0960d?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGZvb2R8ZW58MHx8MHx8fDA%3D', 'Langganan Bulanan', 1, 500000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
