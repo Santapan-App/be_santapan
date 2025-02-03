@@ -7,8 +7,9 @@ import (
 
 // PostgresRepositoryQueries defines the methods for querying the category repository.
 type PostgresRepositoryQueries interface {
-	GetByUserID(ctx context.Context, userID int64) (domain.Transaction, error)
+	GetByUserID(ctx context.Context, userID int64) ([]domain.Transaction, error)
 	GetOngoing(ctx context.Context, userID int64) ([]domain.Transaction, error)
+	GetByID(ctx context.Context, transactionID int64) (domain.Transaction, error)
 	Validate(ctx context.Context, userID int64, transactionID int64) error
 }
 
@@ -33,8 +34,13 @@ func NewService(postgresRepoQuery PostgresRepositoryQueries, postgresRepoCommand
 }
 
 // Fetch fetches the transaction based on the user ID.
-func (s *Service) GetByUserID(ctx context.Context, userID int64) (domain.Transaction, error) {
+func (s *Service) GetByUserID(ctx context.Context, userID int64) ([]domain.Transaction, error) {
 	return s.postgresRepoQuery.GetByUserID(ctx, userID)
+}
+
+// GetByID fetches the transaction based on the transaction ID.
+func (s *Service) GetByID(ctx context.Context, transactionID int64) (domain.Transaction, error) {
+	return s.postgresRepoQuery.GetByID(ctx, transactionID)
 }
 
 // Store stores the transaction.

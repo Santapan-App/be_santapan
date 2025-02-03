@@ -339,12 +339,6 @@ func (a *CartHandler) GetByID(c echo.Context) error {
 		ctx = context.Background()
 	}
 
-	// Retrieve user ID from the context (assuming it's stored in the token claims)
-	userID, ok := c.Get("userID").(int64) // Adjust according to how you're storing the user ID in the context
-	if !ok {
-		return json.Response(c, http.StatusUnauthorized, false, "Unauthorized", nil)
-	}
-
 	// Get the cart ID from the URL parameter
 	cartIDStr := c.Param("id") // Assuming cart ID is passed as a URL parameter
 
@@ -355,12 +349,6 @@ func (a *CartHandler) GetByID(c echo.Context) error {
 	cartID, err := strconv.ParseInt(cartIDStr, 10, 64)
 	if err != nil {
 		return json.Response(c, http.StatusBadRequest, false, "Invalid cart ID", nil)
-	}
-
-	// Ensure the user owns the cart
-	err = a.CartService.Validate(ctx, userID, cartID)
-	if err != nil {
-		return json.Response(c, http.StatusForbidden, false, "You do not own this cart", nil)
 	}
 
 	// Fetch the cart

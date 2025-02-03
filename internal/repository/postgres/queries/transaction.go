@@ -52,25 +52,43 @@ func (m *PostgresTransactionQueryRepository) fetch(ctx context.Context, query st
 			logrus.Error("Failed to scan row:", err)
 			return nil, err
 		}
+
+		// Log the scanned transaction for debugging purposes
+		logrus.WithFields(logrus.Fields{
+			"transactionID": transaction.ID,
+			"userID":        transaction.UserID,
+			"amount":        transaction.Amount,
+			"status":        transaction.Status,
+		}).Info("Scanned transaction")
+
 		result = append(result, transaction)
 	}
+
+	// Check if there were any errors during the row iteration
+	if err = rows.Err(); err != nil {
+		logrus.Error("Error during row iteration:", err)
+		return nil, err
+	}
+
+	// Log the total number of results fetched
+	logrus.WithFields(logrus.Fields{
+		"resultCount": len(result),
+	}).Info("Fetched transactions")
 
 	return result, nil
 }
 
 // Get By User ID
-func (m *PostgresTransactionQueryRepository) GetByUserID(ctx context.Context, userID int64) (res domain.Transaction, err error) {
-	query := `SELECT * FROM transaction WHERE user_id = $1`
+func (m *PostgresTransactionQueryRepository) GetByUserID(ctx context.Context, userID int64) (res []domain.Transaction, err error) {
+	query := `SELECT *  FROM transaction  WHERE user_id = $1 AND (status = 'success' OR status = 'failed')`
 	result, err := m.fetch(ctx, query, userID)
+
+	print("result", result)
 	if err != nil {
-		return domain.Transaction{}, err
+		return nil, err // Return nil for empty slice if there was an error
 	}
 
-	if len(result) > 0 {
-		return result[0], nil
-	}
-
-	return domain.Transaction{}, sql.ErrNoRows
+	return result, nil // Return the full result slice
 }
 
 // Get By ID

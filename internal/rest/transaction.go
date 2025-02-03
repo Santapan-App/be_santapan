@@ -9,6 +9,7 @@ import (
 	"santapan_transaction_service/domain"
 	"santapan_transaction_service/internal/rest/middleware"
 	"santapan_transaction_service/pkg/json"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -18,7 +19,8 @@ import (
 
 //go:generate mockery --name TransactionService
 type TransactionService interface {
-	GetByUserID(ctx context.Context, userID int64) (domain.Transaction, error)
+	GetByUserID(ctx context.Context, userID int64) ([]domain.Transaction, error)
+	GetByID(ctx context.Context, transactionID int64) (domain.Transaction, error)
 	GetOngoing(ctx context.Context, userID int64) ([]domain.Transaction, error)
 	Validate(ctx context.Context, userID int64, transactionID int64) error
 	Store(ctx context.Context, transaction *domain.Transaction) error
@@ -43,6 +45,7 @@ func NewTransactionHandler(e *echo.Echo, transactionService TransactionService, 
 	}
 
 	e.GET("/transaction", handler.Fetch, middleware.AuthMiddleware)
+	e.GET("/transaction/:id", handler.GetByID, middleware.AuthMiddleware)
 	e.GET("/transaction/ongoing", handler.Ongoing, middleware.AuthMiddleware)
 	e.POST("/transaction", handler.Store, middleware.AuthMiddleware)
 }
@@ -136,9 +139,15 @@ func (a *TransactionHandler) Store(c echo.Context) error {
 		return json.Response(c, http.StatusInternalServerError, false, paymentResponse.Message, nil)
 	}
 
+	// Update the cart status
+	cart, err := a.CartService.GetByUserID(ctx, userID, "active")
+	if err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
+	}
+
 	transaction := &domain.Transaction{
 		UserID:    userID,
-		CartID:    1, // Assuming this is the cart ID
+		CartID:    cart.ID, // Assuming this is the cart ID
 		PaymentID: paymentResponse.Data.ID,
 		CourierID: transactionBody.CourierID,
 		AddressID: transactionBody.AddressID,
@@ -149,6 +158,11 @@ func (a *TransactionHandler) Store(c echo.Context) error {
 	}
 
 	if err := a.TransactionService.Store(ctx, transaction); err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
+	}
+
+	cart.Status = "used"
+	if err := a.CartService.Update(ctx, &cart); err != nil {
 		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
 	}
 
@@ -173,6 +187,27 @@ func (a *TransactionHandler) Ongoing(c echo.Context) error {
 	}
 
 	transaction, err := a.TransactionService.GetOngoing(ctx, userID)
+	if err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
+	}
+
+	return json.Response(c, http.StatusOK, true, "Success", transaction)
+}
+
+func (a *TransactionHandler) GetByID(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	transactionID := c.Param("id")
+	transactionIDInt, err := strconv.ParseInt(transactionID, 10, 64)
+	if err != nil {
+		return json.Response(c, http.StatusBadRequest, false, "Invalid transaction ID", nil)
+	}
+
+	transaction, err := a.TransactionService.GetByID(ctx, transactionIDInt)
 	if err != nil {
 		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
 	}

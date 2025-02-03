@@ -42,16 +42,12 @@ func main() {
 	itemQueryRepo := postgresQueries.NewPostgresItemQueryRepository(conn)
 	itemCommandRepo := postgresCommands.NewPostgresItemCommandRepository(conn)
 
-	// historyQueryRepo := postgresQueries.NewPostgresHistoryQueryRepository(conn)
-	// historyCommandRepo := postgresCommands.NewPostgresHistoryCommandRepository(conn)
-
 	transactionQueryRepo := postgresQueries.NewPostgresTransactionQueryRepository(conn)
 	transactionCommandRepo := postgresCommands.NewPostgresTransactionCommandRepository(conn)
 
 	// Service
 	cartService := cart.NewService(cartQueryRepo, cartCommandRepo)
 	itemService := item.NewService(itemQueryRepo, itemCommandRepo)
-	// historyService := history.NewService(historyQueryRepo, historyCommandRepo)
 	transactionService := transaction.NewService(transactionQueryRepo, transactionCommandRepo)
 	e := pkgEcho.Setup()
 
