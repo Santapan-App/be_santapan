@@ -54,16 +54,19 @@ func (m *ArticleRepository) fetch(ctx context.Context, query string, args ...int
 }
 
 // Fetch retrieves articles with ID-based pagination.
-func (m *ArticleRepository) Fetch(ctx context.Context, cursor string, num int64) (res []domain.Article, nextCursor string, err error) {
+func (m *ArticleRepository) Fetch(ctx context.Context, cursor string, num int64, search string) (res []domain.Article, nextCursor string, err error) {
 	query := `SELECT id, title, content, image_url, created_at, updated_at
-			  FROM article WHERE id > $1 ORDER BY id LIMIT $2`
+	FROM article WHERE id > $1 AND (title ILIKE $3 OR content ILIKE $3)
+	ORDER BY id LIMIT $2`
+
+	searchQuery := "%" + search + "%"
 
 	decodedCursor, err := repository.DecodeCursor(cursor)
 	if err != nil && cursor != "" {
 		return nil, "", domain.ErrBadParamInput
 	}
 
-	res, err = m.fetch(ctx, query, decodedCursor, num)
+	res, err = m.fetch(ctx, query, decodedCursor, num, searchQuery)
 	if err != nil {
 		return nil, "", err
 	}

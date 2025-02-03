@@ -8,6 +8,14 @@ CREATE TABLE food_nutrition (
     sugar INT NOT NULL
 );
 
+CREATE TABLE menu_nutrition (
+    id BIGSERIAL PRIMARY KEY,
+    menu_id BIGINT REFERENCES menu(id) ON DELETE CASCADE,
+    food_id BIGINT REFERENCES food_nutrition(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create an index on food_name for faster searching
 CREATE INDEX idx_food_name ON food_nutrition(food_name);
 
@@ -113,3 +121,29 @@ INSERT INTO food_nutrition (food_name, calories, protein, fat, carbohydrates, su
 ( 'tiramisu', 450, 6, 24, 50, 25),
 ('tuna_tartare', 200, 22, 7, 0, 0),
 ('waffles', 350, 8, 14, 60, 14);
+
+INSERT INTO menu_nutrition(menu_id, food_id) VALUES
+(1, 6),  -- beet_salad
+(2, 6),  
+(4, 6),  
+(1, 12), -- caesar_salad
+(2, 12), 
+(4, 12), 
+(1, 14), -- caprese_salad
+(2, 14), 
+(4, 14), 
+(1, 49), -- greek_salad
+(2, 49), 
+(4, 49), 
+(1, 89), -- seaweed_salad
+(2, 89), 
+(4, 89),
+(11, 96), -- sushi
+(12, 96),  
+(11, 87), -- sashimi
+(12, 87),
+(13, 76), -- Beef Bulgogi
+(14, 76), -- Chicken Katsu
+(15, 76), -- Vegetable Curry
+(16, 76), -- Beef Pho
+(10, 76); -- Pad Thai

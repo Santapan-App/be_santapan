@@ -8,8 +8,9 @@ import (
 // PostgresRepositoryQueries defines the methods for querying the category repository.
 type PostgresRepositoryQueries interface {
 	GetByID(ctx context.Context, id int64) (domain.Menu, error)
-	GetByCategoryID(ctx context.Context, categoryID int64) ([]domain.Menu, error)
-	Fetch(ctx context.Context, cursor string, num int64) (res []domain.Menu, nextCursor string, err error)
+	GetByCategoryID(ctx context.Context, categoryID int64, search string) ([]domain.Menu, error)
+	GetByFoodNutrition(ctx context.Context, foodName string) ([]domain.Menu, error)
+	Fetch(ctx context.Context, cursor string, num int64, search string) (res []domain.Menu, nextCursor string, err error)
 }
 
 // PostgresRepositoryCommand defines the methods for executing commands on the category repository.
@@ -31,8 +32,8 @@ func NewService(pq PostgresRepositoryQueries, pc PostgresRepositoryCommand) *Ser
 }
 
 // Fetch retrieves all categories.
-func (c *Service) Fetch(ctx context.Context, cursor string, num int64) (res []domain.Menu, nextCursor string, err error) {
-	res, nextCursor, err = c.postgresRepoQuery.Fetch(ctx, cursor, num)
+func (c *Service) Fetch(ctx context.Context, cursor string, num int64, search string) (res []domain.Menu, nextCursor string, err error) {
+	res, nextCursor, err = c.postgresRepoQuery.Fetch(ctx, cursor, num, search)
 	if err != nil {
 		return nil, "", err
 	}
@@ -49,10 +50,21 @@ func (c *Service) GetByID(ctx context.Context, id int64) (domain.Menu, error) {
 }
 
 // GetByCategoryID retrieves a category by its category ID.
-func (c *Service) GetByCategoryID(ctx context.Context, categoryID int64) ([]domain.Menu, error) {
-	menu, err := c.postgresRepoQuery.GetByCategoryID(ctx, categoryID)
+func (c *Service) GetByCategoryID(ctx context.Context, categoryID int64, search string) ([]domain.Menu, error) {
+	menu, err := c.postgresRepoQuery.GetByCategoryID(ctx, categoryID, search)
 	if err != nil {
 		return nil, err
 	}
+	return menu, nil
+}
+
+// GetByFoodNutrition retrieves a menu by its food nutrition.
+func (c *Service) GetByFoodNutrition(ctx context.Context, foodName string) ([]domain.Menu, error) {
+	menu, err := c.postgresRepoQuery.GetByFoodNutrition(ctx, foodName)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return menu, nil
 }

@@ -77,16 +77,20 @@ func (m *MenuRepository) fetch(ctx context.Context, query string, args ...interf
 }
 
 // Fetch retrieves banners with ID-based pagination.
-func (m *MenuRepository) Fetch(ctx context.Context, cursor string, num int64) (res []domain.Menu, nextCursor string, err error) {
-	query := `SELECT id, title, description, price, image_url, nutrition, features, created_at, updated_at
-			  FROM menu WHERE id > $1 ORDER BY id LIMIT $2`
-
+func (m *MenuRepository) Fetch(ctx context.Context, cursor string, num int64, search string) (res []domain.Menu, nextCursor string, err error) {
+	query := `
+    SELECT id, title, description, price, image_url, nutrition, features, created_at, updated_at
+    FROM menu
+    WHERE id > $1 AND title ILIKE '%' || $3 || '%'
+    ORDER BY id
+    LIMIT $2
+`
 	decodedCursor, err := repository.DecodeCursor(cursor)
 	if err != nil && cursor != "" {
 		return nil, "", domain.ErrBadParamInput
 	}
 
-	res, err = m.fetch(ctx, query, decodedCursor, num)
+	res, err = m.fetch(ctx, query, decodedCursor, num, search)
 	if err != nil {
 		return nil, "", err
 	}
@@ -120,16 +124,39 @@ func (m *MenuRepository) GetByID(ctx context.Context, id int64) (domain.Menu, er
 	return domain.Menu{}, domain.ErrNotFound
 }
 
-func (m *MenuRepository) GetByCategoryID(ctx context.Context, categoryID int64) ([]domain.Menu, error) {
+func (m *MenuRepository) GetByCategoryID(ctx context.Context, categoryID int64, search string) ([]domain.Menu, error) {
 	query := `SELECT m.id, m.title, m.description, m.price, m.image_url, m.nutrition, m.features, m.created_at, m.updated_at
 			  FROM menu m
 			  JOIN category_menu mc ON m.id = mc.menu_id
-			  WHERE mc.category_id = $1`
+			  WHERE mc.category_id = $1 AND m.title LIKE '%' || $2 || '%'`
 
 	result := make([]domain.Menu, 0)
-	result, err := m.fetch(ctx, query, categoryID)
+	result, err := m.fetch(ctx, query, categoryID, search)
 	if err != nil {
 		return nil, err
+	}
+
+	return result, nil
+}
+
+// GetByFoodNutritionID retrieves a single menu record filtered by food_nutrition_id.
+func (m *MenuRepository) GetByFoodNutrition(ctx context.Context, foodName string) ([]domain.Menu, error) {
+	query := `
+    SELECT m.id, m.title, m.description, m.price, m.image_url, m.nutrition, m.features, m.created_at, m.updated_at
+    FROM menu m
+    JOIN menu_nutrition mn ON m.id = mn.menu_id
+	JOIN food_nutrition n ON mn.food_id = n.id
+    WHERE n.food_name = $1
+    ORDER BY m.id
+    `
+
+	result, err := m.fetch(ctx, query, foodName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return nil, domain.ErrNotFound
 	}
 
 	return result, nil

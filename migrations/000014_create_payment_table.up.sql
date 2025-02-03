@@ -25,3 +25,9 @@ CREATE TRIGGER update_payment_updated_at
 BEFORE UPDATE ON payment
 FOR EACH ROW
 EXECUTE FUNCTION update_payment_timestamp();
+
+-- Seed data for payment table
+INSERT INTO payment (reference_id, session_id, user_id, amount, status, url, created_at, updated_at)
+VALUES
+    ('CC', 'session12345', 1, 150000.00, 'paid', 'https://paymentgateway.com/transaction/12345', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('BT', 'session67890', 1, 300000.00, 'unpaid', 'https://paymentgateway.com/transaction/67890', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

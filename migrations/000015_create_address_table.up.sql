@@ -25,3 +25,9 @@ CREATE TRIGGER update_address_updated_at
 BEFORE UPDATE ON address
 FOR EACH ROW
 EXECUTE FUNCTION update_address_timestamp();
+
+-- Seed data for address table
+INSERT INTO address (user_id, label, address, name, notes, phone, created_at, updated_at)
+VALUES
+    (1, 'Home', 'Jl. Raya No. 1, Jakarta, Indonesia', 'John Doe', 'Near the city center', '081234567890', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (1, 'Work', 'Jl. Industri No. 2, Jakarta, Indonesia', 'John Doe', 'Office located in the industrial area', '082345678901', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
