@@ -19,6 +19,7 @@ type MenuService interface {
 	Fetch(ctx context.Context, cursor string, num int64, search string) ([]domain.Menu, string, error)
 	GetByID(ctx context.Context, id int64) (domain.Menu, error)
 	GetByCategoryID(ctx context.Context, categoryID int64, search string) ([]domain.Menu, error)
+	GetByFoodNutrition(ctx context.Context, foodName string) ([]domain.Menu, error)
 }
 
 // ArticleHandler  represent the httphandler for article
@@ -44,6 +45,7 @@ func NewMenuHandler(e *echo.Echo, menuService MenuService, personalisasiService 
 	e.GET("/menu/:id", handler.GetByID)
 	e.GET("/menu/category/:category_id", handler.GetByCategoryID)
 	e.GET("/menu/recommendation", handler.GetRecommendation, middleware.AuthMiddleware)
+	e.GET("/menu/food-nutrition", handler.GetByFoodNutrition)
 }
 
 func (ah *MenuHandler) Fetch(c echo.Context) error {
@@ -134,6 +136,23 @@ func (ah *MenuHandler) GetRecommendation(c echo.Context) error {
 	}
 
 	return json.Response(c, http.StatusOK, true, "Successfully fetched menu recommendations", responseData)
+}
+
+// GetRecommendation by foodName
+func (ah *MenuHandler) GetByFoodNutrition(c echo.Context) error {
+	foodName := c.QueryParam("food_name")
+
+	menus, err := ah.MenuService.GetByFoodNutrition(c.Request().Context(), foodName)
+	if err != nil {
+		return json.Response(c, http.StatusNotFound, false, "", err.Error())
+	}
+
+	responseData := map[string]interface{}{
+		"menus":      menus, // Return the filtered menus
+		"nextCursor": "",
+	}
+
+	return json.Response(c, http.StatusOK, true, "Successfully Get Articles!", responseData)
 }
 
 func (ah *MenuHandler) GetByID(c echo.Context) error {

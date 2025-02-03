@@ -80,7 +80,7 @@ FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 
 -- Seed data for menu table
-INSERT INTO menu (class, title, description, price, image_url, nutrition, features)
+INSERT INTO menu (title, description, price, image_url, nutrition, features)
 VALUES
     ('Avocado Salad', 'A healthy avocado salad with fresh vegetables and a side of toast', 45000, 'https://images.unsplash.com/photo-1670237735381-ac5c7fa72c51?q=80&w=2606&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 350, "protein": 5, "fat": 30}', '{"gluten_free": true, "vegetarian": true}'),
     ('Grilled Chicken Salad', 'A delicious grilled chicken salad', 50000, 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=2626&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', '{"calories": 400, "protein": 35, "fat": 0}', '{"high_protein": true}'),
@@ -135,18 +135,9 @@ VALUES
     (6, 5),  -- Tofu Stir-fry
     (6, 15), -- Vegetable Curry
     (6, 1),
-
-    -- Seafood (category_id = 7)
     (7, 11), -- Grilled Salmon
     (7, 12), -- Sushi Platter
     (7, 17); -- Falafel Wrap
-
-    -- Asian (category_id = 8)
-    (8, 13), -- Beef Bulgogi
-    (8, 14), -- Chicken Katsu
-    (8, 15), -- Vegetable Curry
-    (8, 16), -- Beef Pho
-    (8, 10); -- Pad Thai
     
 -- Seed data for bundling table
 INSERT INTO bundling (bundling_name, bundling_type, price, image_url)

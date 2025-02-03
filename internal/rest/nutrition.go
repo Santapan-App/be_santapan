@@ -29,7 +29,7 @@ func NewNutritionHandler(e *echo.Echo, nutritionService NutritionService) {
 }
 
 func (ah *NutritionHandler) GetByClassification(c echo.Context) error {
-	classification := c.Param("classification")
+	classification := c.QueryParam("classification")
 
 	nutrition, err := ah.NutritionService.GetByClassification(c.Request().Context(), classification)
 	if err != nil {

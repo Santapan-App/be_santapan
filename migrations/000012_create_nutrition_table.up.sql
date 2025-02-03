@@ -10,8 +10,8 @@ CREATE TABLE food_nutrition (
 
 CREATE TABLE menu_nutrition (
     id BIGSERIAL PRIMARY KEY,
-    menu_id BIGINT NOT NULL,
-    food_id BIGINT NOT NULL,
+    menu_id BIGINT REFERENCES menu(id) ON DELETE CASCADE,
+    food_id BIGINT REFERENCES food_nutrition(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -141,9 +141,9 @@ INSERT INTO menu_nutrition(menu_id, food_id) VALUES
 (11, 96), -- sushi
 (12, 96),  
 (11, 87), -- sashimi
-(12, 87)
+(12, 87),
 (13, 76), -- Beef Bulgogi
 (14, 76), -- Chicken Katsu
 (15, 76), -- Vegetable Curry
 (16, 76), -- Beef Pho
-(10, 76); -- Pad Thai;
+(10, 76); -- Pad Thai

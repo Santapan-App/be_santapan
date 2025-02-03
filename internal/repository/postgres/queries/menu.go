@@ -138,3 +138,26 @@ func (m *MenuRepository) GetByCategoryID(ctx context.Context, categoryID int64, 
 
 	return result, nil
 }
+
+// GetByFoodNutritionID retrieves a single menu record filtered by food_nutrition_id.
+func (m *MenuRepository) GetByFoodNutrition(ctx context.Context, foodName string) ([]domain.Menu, error) {
+	query := `
+    SELECT m.id, m.title, m.description, m.price, m.image_url, m.nutrition, m.features, m.created_at, m.updated_at
+    FROM menu m
+    JOIN menu_nutrition mn ON m.id = mn.menu_id
+	JOIN food_nutrition n ON mn.food_id = n.id
+    WHERE n.food_name = $1
+    ORDER BY m.id
+    `
+
+	result, err := m.fetch(ctx, query, foodName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return nil, domain.ErrNotFound
+	}
+
+	return result, nil
+}
