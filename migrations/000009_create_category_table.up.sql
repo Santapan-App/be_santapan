@@ -38,4 +38,5 @@ VALUES
     ('Japanese', 'https://plus.unsplash.com/premium_photo-1723874570807-570c56b41e4e?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
     ('Desserts', 'https://images.unsplash.com/photo-1495147466023-ac5c588e2e94?q=80&w=2787&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
     ('Vegan', 'https://images.unsplash.com/photo-1623428187969-5da2dcea5ebf?q=80&w=2864&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-    ('Seafood', 'https://plus.unsplash.com/premium_photo-1707935175109-ba307d98bfe2?q=80&w=2787&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+    ('Seafood', 'https://plus.unsplash.com/premium_photo-1707935175109-ba307d98bfe2?q=80&w=2787&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+    ('Asian', 'https://i.pinimg.com/736x/5e/af/12/5eaf1298fe096154a3771ad40ace04b1.jpg');;

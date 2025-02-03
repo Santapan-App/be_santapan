@@ -14,6 +14,7 @@ import (
 	postgresQueries "santapan/internal/repository/postgres/queries"
 	"santapan/internal/rest"
 	"santapan/menu"
+	"santapan/personalisasi"
 	pkgEcho "santapan/pkg/echo"
 	"santapan/pkg/sql"
 	"santapan/token"
@@ -79,6 +80,8 @@ func main() {
 
 	courierQueryRepo := postgresQueries.NewPostgresCourierQueryRepository(conn)
 
+	personalisasiCommandRepo := postgresCommands.NewPostgresPersonalisasiCommandRepository(conn)
+	personalisasiQueryRepo := postgresQueries.NewPostgresPersonalisasiQueryRepository(conn)
 	// Initialize services
 	tokenService := token.NewService(tokenQueryRepo, tokenCommandRepo)
 	userService := user.NewService(userQueryRepo, userQueryCommand)
@@ -89,17 +92,18 @@ func main() {
 	bundlingService := bundling.NewService(bundlingQueryRepo, bundlingCommandRepo, menuQueryRepo)
 	addressService := address.NewService(addressQueryRepo, addressCommandRepo)
 	courierService := courier.NewService(courierQueryRepo)
-
+	personalisasiService := personalisasi.NewService(personalisasiCommandRepo, personalisasiQueryRepo)
 	e := pkgEcho.Setup()
 
 	rest.NewAuthHandler(e, tokenService, userService)
 	rest.NewArticleHandler(e, articleService)
 	rest.NewCategoryHandler(e, categoryService)
 	rest.NewBannerHandler(e, bannerService)
-	rest.NewMenuHandler(e, menuService)
+	rest.NewMenuHandler(e, menuService, personalisasiService)
 	rest.NewBundlingHandler(e, bundlingService)
 	rest.NewAddressHandler(e, addressService)
 	rest.NewCourierHandler(e, courierService)
+	rest.NewPersonalisasiHandler(e, personalisasiService)
 
 	go func() {
 		pkgEcho.Start(e)
