@@ -99,6 +99,7 @@ func (a *TransactionHandler) Store(c echo.Context) error {
 	// Prepare the payment request
 	paymentBody := domain.PaymentBody{
 		Amount: transactionBody.Amount,
+		Image:  transactionBody.ItemImages, // Assuming this is a slice of strings
 		Name:   transactionBody.ItemNames,  // Assuming this is a slice of strings
 		Qty:    transactionBody.ItemQtys,   // Assuming this is a slice of int64
 		Price:  transactionBody.ItemPrices, // Assuming this is a slice of float64

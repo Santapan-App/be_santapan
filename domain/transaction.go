@@ -22,6 +22,7 @@ type TransactionBody struct {
 	CourierID  int64     `json:"courier_id" validate:"required"`
 	AddressID  int64     `json:"address_id" validate:"required"`
 	Amount     float64   `json:"amount" validate:"required,gt=0"`
+	ItemImages []string  `json:"item_images" validate:"required"`              // Array of image URLs
 	ItemNames  []string  `json:"item_names" validate:"required,dive,required"` // Array of item names
 	ItemQtys   []int64   `json:"item_qtys" validate:"required,dive,gt=0"`      // Array of item quantities
 	ItemPrices []float64 `json:"item_prices" validate:"required,dive,gt=0"`    // Array of item prices
