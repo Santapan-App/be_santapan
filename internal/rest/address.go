@@ -16,6 +16,7 @@ import (
 // PostgresRepositoryQueries defines the methods for querying the category repository.
 type AddressService interface {
 	GetByUserID(ctx context.Context, userID int64) ([]domain.Address, error)
+	GetByID(ctx context.Context, id int64) (domain.Address, error)
 	Create(ctx context.Context, a domain.Address) (domain.Address, error)
 	Update(ctx context.Context, a domain.Address) (domain.Address, error)
 	Delete(ctx context.Context, id int64) error
@@ -38,6 +39,7 @@ func NewAddressHandler(e *echo.Echo, addressService AddressService) {
 	}
 
 	e.GET("/address", handler.GetByUserID, middleware.AuthMiddleware)
+	e.GET("/address/:id", handler.GetByID, middleware.AuthMiddleware)
 	e.POST("/address", handler.Create, middleware.AuthMiddleware)
 	e.PUT("/address", handler.Update, middleware.AuthMiddleware)
 }
@@ -50,6 +52,21 @@ func (ah *AddressHandler) GetByUserID(c echo.Context) error {
 	if err != nil {
 		return json.Response(c, http.StatusInternalServerError, false, "", err.Error())
 	}
+	return json.Response(c, http.StatusOK, true, "Successfully Get Address!", res)
+}
+
+// GetByID retrieves an address by ID.
+func (ah *AddressHandler) GetByID(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return json.Response(c, http.StatusBadRequest, false, "", "Invalid ID")
+	}
+
+	res, err := ah.AddressService.GetByID(c.Request().Context(), int64(id))
+	if err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, "", err.Error())
+	}
+
 	return json.Response(c, http.StatusOK, true, "Successfully Get Address!", res)
 }
 
