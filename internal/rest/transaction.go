@@ -45,6 +45,7 @@ func NewTransactionHandler(e *echo.Echo, transactionService TransactionService, 
 	}
 
 	e.GET("/transaction", handler.Fetch, middleware.AuthMiddleware)
+	e.GET("/transaction/:id/:status", handler.GetChangeStatus)
 	e.GET("/transaction/:id", handler.GetByID, middleware.AuthMiddleware)
 	e.GET("/transaction/ongoing", handler.Ongoing, middleware.AuthMiddleware)
 	e.POST("/transaction", handler.Store, middleware.AuthMiddleware)
@@ -81,7 +82,6 @@ func (a *TransactionHandler) Store(c echo.Context) error {
 
 	// Bind and validate the transaction request
 	var transactionBody domain.TransactionBody
-	logrus.Info(transactionBody)
 	if err := c.Bind(&transactionBody); err != nil {
 		return json.Response(c, http.StatusUnprocessableEntity, false, "Invalid request", nil)
 	}
@@ -96,6 +96,8 @@ func (a *TransactionHandler) Store(c echo.Context) error {
 		return json.Response(c, http.StatusUnauthorized, false, "Unauthorized", nil)
 	}
 
+	logrus.Info(transactionBody)
+
 	// Prepare the payment request
 	paymentBody := domain.PaymentBody{
 		Amount: transactionBody.Amount,
@@ -104,7 +106,6 @@ func (a *TransactionHandler) Store(c echo.Context) error {
 		Qty:    transactionBody.ItemQtys,   // Assuming this is a slice of int64
 		Price:  transactionBody.ItemPrices, // Assuming this is a slice of float64
 	}
-
 	paymentRequestBody, err := encodingJson.Marshal(paymentBody)
 	if err != nil {
 		return json.Response(c, http.StatusInternalServerError, false, "Failed to prepare payment request", nil)
@@ -216,36 +217,32 @@ func (a *TransactionHandler) GetByID(c echo.Context) error {
 	return json.Response(c, http.StatusOK, true, "Success", transaction)
 }
 
-// GetDetailTransaction get detail transaction
-// func (a *TransactionHandler) GetDetailTransaction(c echo.Context) error {
-// 	// Retrieve user ID from the context (assuming it's stored in the token claims)
+// GetChangeStatus change status transaction
+func (a *TransactionHandler) GetChangeStatus(c echo.Context) error {
+	ctx := c.Request().Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
-// 	ctx := c.Request().Context()
-// 	if ctx == nil {
-// 		ctx = context.Background()
-// 	}
+	transactionID := c.Param("id")
+	transactionIDInt, err := strconv.ParseInt(transactionID, 10, 64)
+	if err != nil {
+		return json.Response(c, http.StatusBadRequest, false, "Invalid transaction ID", nil)
+	}
 
-// 	// Retrieve user ID from the context (assuming it's stored in the token claims)
-// 	userID, ok := c.Get("userID").(int64) // Adjust according to how you're storing the user ID in the context
-// 	if !ok {
-// 		return json.Response(c, http.StatusUnauthorized, false, "Unauthorized", nil)
-// 	}
+	status := c.Param("status")
 
-// 	transactionID := c.Param("id")
-// 	transactionIDInt, err := strconv.ParseInt(transactionID, 10, 64)
-// 	if err != nil {
-// 		return json.Response(c, http.StatusBadRequest, false, "Invalid transaction ID", nil)
-// 	}
+	transaction, err := a.TransactionService.GetByID(ctx, transactionIDInt)
+	if err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
+	}
 
-// 	err = a.TransactionService.Validate(ctx, userID, transactionIDInt)
-// 	if err != nil {
-// 		return json.Response(c, http.StatusForbidden, false, err.Error(), nil)
-// 	}
+	transaction.Status = status
 
-// 	transaction, err := a.TransactionService.GetByID(ctx, transactionIDInt)
-// 	if err != nil {
-// 		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
-// 	}
+	err = a.TransactionService.Update(ctx, &transaction)
+	if err != nil {
+		return json.Response(c, http.StatusInternalServerError, false, err.Error(), nil)
+	}
 
-// 	return json.Response(c, http.StatusOK, true, "Success", transaction)
-// }
+	return json.Response(c, http.StatusOK, true, "Success", transaction)
+}
